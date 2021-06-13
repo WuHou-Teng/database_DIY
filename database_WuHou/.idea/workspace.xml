@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="f140b888-5e11-4bf4-af9b-e049882fe196" name="Default Changelist" comment="" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
+  <component name="ProjectId" id="1tpbqZDGUcd0fy7vEnOI8STszi3" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="aspect.path.notification.shown" value="true" />
+    <property name="last_opened_file_path" value="D:/Documents/1183720739/pcLiangNai/main/Servers" />
+    <property name="node.js.detected.package.eslint" value="true" />
+    <property name="node.js.detected.package.tslint" value="true" />
+    <property name="node.js.path.for.package.eslint" value="project" />
+    <property name="node.js.path.for.package.tslint" value="project" />
+    <property name="node.js.selected.package.eslint" value="(autodetect)" />
+    <property name="node.js.selected.package.tslint" value="(autodetect)" />
+    <property name="project.structure.last.edited" value="Project" />
+    <property name="project.structure.proportion" value="0.0" />
+    <property name="project.structure.side.proportion" value="0.2" />
+  </component>
+  <component name="RunManager">
+    <configuration default="true" type="ArquillianTestNG" factoryName="" nameIsGenerated="true">
+      <option name="arquillianRunConfiguration">
+        <value>
+          <option name="containerStateName" value="" />
+        </value>
+      </option>
+      <option name="TEST_OBJECT" value="CLASS" />
+      <properties />
+      <listeners />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="f140b888-5e11-4bf4-af9b-e049882fe196" name="Default Changelist" comment="" />
+      <created>1623469171585</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1623469171585</updated>
+      <workItem from="1623469172675" duration="11714000" />
+      <workItem from="1623548429920" duration="7655000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="526" y="166" key="#com.intellij.ide.util.MemberChooser" timestamp="1623550573711">
+      <screen x="0" y="0" width="1440" height="920" />
+    </state>
+    <state x="526" y="166" key="#com.intellij.ide.util.MemberChooser/0.0.1440.920/-225.-1440.1645.960@0.0.1440.920" timestamp="1623550573711" />
+    <state x="501" y="216" key="FileChooserDialogImpl" timestamp="1623506883194">
+      <screen x="0" y="0" width="1440" height="920" />
+    </state>
+    <state x="501" y="216" key="FileChooserDialogImpl/0.0.1440.920/-225.-1440.1645.960@0.0.1440.920" timestamp="1623506883194" />
+    <state x="537" y="-966" key="SettingsEditor" timestamp="1623469213598">
+      <screen x="128" y="-1080" width="1858" height="1080" />
+    </state>
+    <state x="537" y="-966" key="SettingsEditor/0.0.1440.920/128.-1080.1858.1080@128.-1080.1858.1080" timestamp="1623469213598" />
+  </component>
+</project>
