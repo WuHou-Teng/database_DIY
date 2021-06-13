@@ -9,7 +9,13 @@ public class Main {
      * 总库
      * 其下包含多个数据库
      */
-    public static HashMap<String, HashMap<String, HashMap<String, ArrayList<String>>>> DB = new HashMap<>();
+    private static HashMap<String, HashMap<String, HashMap<String, ArrayList<String>>>> DB = new HashMap<>();
+
+    private static final String READ_WRITE = "RW";
+    private static final String READ_ONLY = "RO";
+    private static final String LOCK = "LO";
+
+    //private static final String KeyWords = "Carol";
 
     /**
      * 时间反馈
@@ -23,6 +29,7 @@ public class Main {
         return String.format("|%s|", Fmt.format(new Date()));
     }
 
+
     /**
      * 用于创建一个新的数据库并放到上面的总库中。
      *
@@ -35,28 +42,29 @@ public class Main {
             if (!Name.equals("")) {
                 // 新创建一个HashMap，FS，也就是新的数据库
                 HashMap<String, HashMap<String, ArrayList<String>>> FS = new HashMap<>();//单个库（目录）
-                // SS 作为value的记录Map
-                HashMap<String, ArrayList<String>> SS = new HashMap<>();//内矩阵
-                // K 作为Key的记录Map
-                HashMap<String, ArrayList<String>> K = new HashMap<>();
-                // Nm作为Tar的记录Map
-                HashMap<String, ArrayList<String>> Nm = new HashMap<>();//对象
-                // 新建ArrayList，用于记录Tar，这个只是用来打包Tar
-                ArrayList<String> T = new ArrayList<>();
+                HashMap<String, ArrayList<String>> SS = new HashMap<>();// SS 作为value的记录Map
+                HashMap<String, ArrayList<String>> K = new HashMap<>();// K 作为Key的记录Map
+                HashMap<String, ArrayList<String>> Nm = new HashMap<>(); // Nm作为Tar的记录Map
+
+                HashMap<String, ArrayList<String>> Att = new HashMap<>();// 总属性
+                ArrayList<String> Attt = new ArrayList<>();
+                Attt.add(READ_WRITE); //默认权限是可读可写
+                Att.put("Att", Attt);
+
+                ArrayList<String> T = new ArrayList<>(); // 新建ArrayList，用于记录Tar，这个只是用来打包Tar
                 ArrayList<String> Ref = new ArrayList<>();
-                Ref.add("");
-                // 将列表KeyList 放到 Keymap 中
-                K.put("Key", Key);
-                K.put("Ref", Ref);
-                // 将打包的Tar列表放入TarMap中 作为TarMap
-                Nm.put("Tar", T);
-                // 将 TarMap 放到FSMap中
-                FS.put("Tar", Nm);
-                // 将 KeyMap 放入FSMap中
-                FS.put("Key", K);
-                // 将 valueMap 放入FSMap中
-                FS.put("Value", SS);
-                // 将FSMap 放入总数据库中。
+                Ref.add(""); // 将列表KeyList 放到 Keymap 中
+                K.put("Key", Key); // 添加reference 列表
+                K.put("Ref", Ref); // 将打包的Tar列表放入TarMap中 作为TarMap
+                K.put("Att", Attt);
+
+                Nm.put("Tar", T); // 将 TarMap 放到FSMap中
+                Nm.put("Att", Attt);
+
+                FS.put("Tar", Nm); // 将 KeyMap 放入FSMap中
+                FS.put("Key", K); // 将 valueMap 放入FSMap中
+                FS.put("Value", SS); // 将FSMap 放入总数据库中。
+                FS.put("Att", Att);
                 DB.put(Name, FS);
                 System.out.println(getTime() +
                         "<INFO>DBbuilder:Successfully built DB <" + Name + ">");
@@ -70,31 +78,129 @@ public class Main {
     }
 
     /**
-     * 获得 dataBase 的轮子
+     * 获得 AttributeMap
      *
-     * @return Database
+     * @param name database name
+     * @return AttrMap
      */
-    public static HashMap<String, HashMap<String, ArrayList<String>>> getDataBase(String name) throws
+    private static HashMap<String, ArrayList<String>> getAttrMap(String name) throws
+            EmptyDataBaseNameException,
             NoDataBaseExistException,
-            EmptyDataBaseNameException {
+            AttributeException {
         if (name.equals("")) {
             throw new EmptyDataBaseNameException();
         }
-        if (DB.containsKey(name)) {
-            return DB.get(name);
+        if (DB.containsKey(name) && DB.get(name) != null) {
+            try {
+                return DB.get(name).get("Att");
+            } catch (NullPointerException e) {
+                HashMap<String, ArrayList<String>> Att = new HashMap<>();// 总属性
+                ArrayList<String> Attt = new ArrayList<>();
+                Attt.add(LOCK); //如果一个database的权限是缺失的，则默认视为LOCK
+                Att.put("Att", Attt);
+                DB.get(name).put("Att", Att);
+                throw new AttributeException("<ERROR> getAttrMap:Attribute Missed, has been set to LOCK");
+            }
         } else {
-            System.err.println(getTime() + "<ERROR>getValue:Non-existent Database <" + name + ">");
+            System.err.println(getTime() + "<ERROR> getAttrMap:Non-existent Database <" + name + ">");
             throw new NoDataBaseExistException(name);
         }
     }
 
+    /**
+     * 获得 AttributeList
+     *
+     * @param name 数据库名字
+     */
+    private static ArrayList<String> getAttrList(String name) throws
+            EmptyDataBaseNameException,
+            NoDataBaseExistException,
+            AttributeException {
+        try {
+            return getAttrMap(name).get("Att");
+        } catch (NullPointerException e) {
+            ArrayList<String> Attt = new ArrayList<>();
+            Attt.add(LOCK); //如果一个database的权限是缺失的，则默认视为LOCK
+            DB.get(name).get("Att").put("Att", Attt);
+            throw new AttributeException("<ERROR> getAttrList:Attribute Missed, has been seen as LOCK");
+        }
+    }
+
+    /**
+     * 获得 dataBaseMap
+     *
+     * @return Database 返回存放了一个 database 的 Map
+     */
+    public static HashMap<String, HashMap<String, ArrayList<String>>> getDataBase(String name) throws
+            NoDataBaseExistException,
+            EmptyDataBaseNameException,
+            AttributeException {
+        if (name.equals("")) {
+            throw new EmptyDataBaseNameException();
+        }
+        if (DB.containsKey(name) && DB.get(name) != null) {
+            String attr = getAttrList(name).get(0);
+            if (attr.equals(LOCK)) {
+                throw new AttributeException("<ERROR> getDataBase:Access denied");
+            } else if (attr.equals(READ_ONLY)) {
+                return new HashMap<>(DB.get(name));
+            } else if (attr.equals(READ_WRITE)) {
+                return DB.get(name);
+            } else {
+                throw new AttributeException("<ERROR> getDataBase:UNKNOWN Attribute");
+            }
+        } else {
+            System.err.println(getTime() + "<ERROR> getValue:Non-existent Database <" + name + ">");
+            throw new NoDataBaseExistException(name);
+        }
+    }
+
+    /**
+     * 修改数据库的总属性
+     *
+     * @param name      数据库名称
+     * @param attrOrder 希望修改的属性位于属性列表的位置，如果该位置没有属性，则默认添加新的属性
+     * @param attr      新的属性名称
+     */
+    private static void modifyAttDB(String name, int attrOrder, String attr) {
+        try {
+            getAttrList(name).set(attrOrder, attr);
+            System.out.println("<INFO> modifyAttDataBase:Successfully changed attr");
+        } catch (IndexOutOfBoundsException e) {
+            try {
+                getAttrList(name).add(attr);
+                System.out.println("<INFO> modifyAttDataBase:Successfully added attr to position "
+                        + getAttrList(name).size()
+                        + "in AttrList");
+            } catch (Exception e1) {
+                System.err.println("<ERROR> modifyAttDataBase:Modify attr failed");
+                e1.printStackTrace();
+            }
+        } catch (Exception e1) {
+            System.err.println("<ERROR> modifyAttDataBase:Modify attr failed");
+            e1.printStackTrace();
+        }
+    }
+
+    /**
+     * 打印指定数据库的属性栏
+     */
+    private static String attDBToString(String name) throws
+            NoDataBaseExistException,
+            AttributeException,
+            EmptyDataBaseNameException {
+        return getAttrList(name).toString();
+    }
+
+    /**
      * 获得 TarList 的轮子
      *
      * @return TarList
      */
     public static ArrayList<String> getTarList(String name) throws
             NoDataBaseExistException,
-            EmptyDataBaseNameException {
+            EmptyDataBaseNameException,
+            AttributeException {
         if (getDataBase(name).get("Tar").get("Tar").size() >= 1) {
             System.out.println(getTime() +
                     "<INFO>getTarList:Successfully get Tar <" +
@@ -113,7 +219,8 @@ public class Main {
     public static boolean verifyTarExist(String name, String tar) throws
             NoExistTargetException,
             NoDataBaseExistException,
-            EmptyDataBaseNameException {
+            EmptyDataBaseNameException,
+            AttributeException {
         if (getTarList(name).contains(tar)) {
             return true;
         } else {
@@ -123,12 +230,13 @@ public class Main {
     }
 
     /**
-     * 获得 ValueList 的轮子
+     * 获得 ValueList
      */
     public static ArrayList<String> getValueListByTar(String name, String tar) throws
             NoExistTargetException,
             NoDataBaseExistException,
-            EmptyDataBaseNameException {
+            EmptyDataBaseNameException,
+            AttributeException {
         if (getTarList(name).contains(tar)) {
             if (getDataBase(name).get("Value").get(tar) != null) {
                 return getDataBase(name).get("Value").get(tar);
@@ -145,10 +253,11 @@ public class Main {
     /**
      * 获取 KeyMap
      */
-    public static HashMap<String, ArrayList<String>> getKeyMap (String name) throws
+    public static HashMap<String, ArrayList<String>> getKeyMap(String name) throws
             NoDataBaseExistException,
             EmptyDataBaseNameException,
-            KeyMapUninitialException{
+            KeyMapUninitialException,
+            AttributeException {
         if (getDataBase(name).get("Key").size() > 0) {
             return getDataBase(name).get("Key");
         } else {
@@ -158,12 +267,13 @@ public class Main {
     }
 
     /**
-     * 获得 KeyList 的轮子
+     * 获得 KeyList
      */
     public static ArrayList<String> getKeyList(String name) throws
             NoDataBaseExistException,
             EmptyDataBaseNameException,
-            KeyMapUninitialException {
+            KeyMapUninitialException,
+            AttributeException {
         if (getKeyMap(name).get("Key").size() >= 1) {
             System.out.println(getTime() +
                     "<INFO>getKeyList:Successfully get KeyList <" +
@@ -177,13 +287,14 @@ public class Main {
     }
 
     /**
-     * 获取reference
+     * 获取 reference 即, 数据库说明
      */
     public static String getReference(String name) throws
             NoDataBaseExistException,
             NoExistReferenceException,
             KeyMapUninitialException,
-            EmptyDataBaseNameException {
+            EmptyDataBaseNameException,
+            AttributeException {
         if (getKeyMap(name).get("Ref") != null) {
             return getKeyMap(name).get("Ref").toString();
         } else {
@@ -191,36 +302,43 @@ public class Main {
         }
     }
 
-
     /**
      * 获得 Key 在 KeyList中的位置
+     *
+     * @param name 数据库名字
+     * @param key Key的名字
+     * @return 对应的 key 在 KeyList 中的位置
      */
     public static int getKeyPosition(String name, String key) throws
             NoDataBaseExistException,
             EmptyDataBaseNameException,
             NoExistKeyException,
-            KeyMapUninitialException {
+            KeyMapUninitialException,
+            AttributeException {
         if (getKeyList(name).contains(key)) {
-            return getDataBase(name).get("Key").get("Key").indexOf(key);
+            return getKeyList(name).indexOf(key);
         } else {
-            System.err.println(getTime() + "<ERROR>getValue:Non-existent Key <" + key + ">");
+            System.err.println(getTime() + "<ERROR>getKeyPosition:Non-existent Key <" + key + ">");
             throw new NoExistKeyException(key);
         }
     }
 
-
-
-
-    public static void setRef(String Name, String Ref) {
+    /**
+     * 修改数据库说明
+     *
+     * @param name 数据库名字
+     * @param ref 想要用于更新的 reference 字符串
+     */
+    public static void setRef(String name, String ref) {
         try {
-            getDataBase(Name).get("Key").get("Ref").set(0, Ref);
+            getDataBase(name).get("Key").get("Ref").set(0, ref);
             System.out.println(getTime() +
-                    "<INFO>setReference:Successfully added reference <" +
-                    Ref + "> to database <" + Name + ">");
+                    "<INFO>setRef:Successfully added reference <" +
+                    ref + "> to database <" + name + ">");
         } catch (Exception e) {
             System.err.println(getTime() +
-                    "<ERROR>setReference:Unexpection error when addReference to Database <" +
-                    Name + ">");
+                    "<ERROR>setRef:Unexpected error when addReference to Database <" +
+                    name + ">");
             e.printStackTrace();
         }
     }
@@ -253,6 +371,7 @@ public class Main {
             } else {
                 System.err.println("<ERROR>DBkey:Empty Key name!");
             }
+            
         } catch (Exception e) {
             System.err.println("<ERROR>DBkey:KeyAdd failed!");
             e.printStackTrace();
@@ -331,14 +450,18 @@ public class Main {
     public static void printDB(String Name) {
         if (DB.get(Name) != null) {
             try {
+                int counter = 0;
                 System.out.println("DBprinter:Now printing database <" + Name + ">");
                 System.out.println("Reference:" + DB.get(Name).get("Key").get("Ref"));
                 System.out.println("==================");
                 System.out.println("<Tag>" + DB.get(Name).get("Key").get("Key"));
                 for (int i = 0; i <= DB.get(Name).get("Tar").get("Tar").size() - 1; i++) {
                     System.out.println("<" + DB.get(Name).get("Tar").get("Tar").get(i) + ">" + DB.get(Name).get("Value").get(DB.get(Name).get("Tar").get("Tar").get(i)));
+                    counter = counter + DB.get(Name).get("Value").get(DB.get(Name).get("Tar").get("Tar").get(i)).size();
+                    counter = counter + getValueListByTar(Name, getTarList(Name).get(i)).size();
                 }
                 System.out.println("==================");
+                System.out.println(Fmt.format(new Date()) + "<INFO>DBprinter:Successfully printed <" + Name + ">, " + counter + "Value were installed.");
                 System.out.println(getTime() + "<INFO>DBprinter:Successfully printed <" + Name + ">");
                 return;
             } catch (Exception e) {
@@ -353,7 +476,6 @@ public class Main {
     }
 
 
-
     /**
      * 补位函数
      * 用于检测参数字符串的长度，并作调整，再打印输出。
@@ -363,18 +485,13 @@ public class Main {
      */
     public static String lengthAlert(String content) {
         if (content.length() >= 8) {
-            // 0123456789
-            // 0123456_|
             return String.format("%s_", content.substring(0, 7));
         } else {
             StringBuilder text = new StringBuilder();
-            // 0123
-            // 0123____|
             text.append(content);
             for (int i = 8 - content.length(); i > 0; i--) {
                 text.append(" ");
             }
-            //text.append(" ".repeat(8 - content.length()));
             return text.toString();
         }
     }
@@ -383,12 +500,13 @@ public class Main {
      * 重写 toString() 方法
      * TODO  添加 Try block
      */
-    public static String dataBaseToString(HashMap<String, HashMap<String, HashMap<String, ArrayList<String>>>> DB) throws
+    public static String dataBaseToString() throws
             EmptyDataBaseNameException,
             KeyMapUninitialException,
             NoDataBaseExistException,
             NoExistReferenceException,
-            NoExistTargetException {
+            NoExistTargetException,
+            AttributeException {
         StringBuilder wareHouseS = new StringBuilder();
         wareHouseS.append("\n<Out> Now print all DataBase\n");
         // 遍历所有dataBase
@@ -403,14 +521,20 @@ public class Main {
             // dataBase 名字和创建时间
             wareHouseS.append(String.format("[%s] Description: %s\n", entry.getKey(),
                     getReference(entry.getKey())));
+            // 打印数据库目前的属性栏
+            wareHouseS.append("# Attribute:");
+            for (String attr : getAttrList(entry.getKey())) {
+                wareHouseS.append(String.format("%s.", attr));
+            }
+            wareHouseS.append("\n");
             // 遍历所有 key 作为表格第一行
             wareHouseS.append("________| ");
-            for (String keys : getKeyList(entry.getKey())){
+            for (String keys : getKeyList(entry.getKey())) {
                 wareHouseS.append(String.format("%s ", lengthAlert(keys)));
             }
             wareHouseS.append("\n");
             // 遍历Tar的长度（这里Tar的长度应该和dataBase.的外层长度相同。
-            for (int i = 0; i < getTarList(entry.getKey()).size(); i ++) {
+            for (int i = 0; i < getTarList(entry.getKey()).size(); i++) {
                 wareHouseS.append(lengthAlert(getTarList(entry.getKey()).get(i)));
                 wareHouseS.append("| ");
                 for (String value : getValueListByTar(entry.getKey(), getTarList(entry.getKey()).get(i))) {
@@ -448,7 +572,7 @@ public class Main {
 
     public static ArrayList<String> getRow(String Name, String Key) {
         try {
-            ArrayList<String> res = new ArrayList();
+            ArrayList<String> res = new ArrayList<>();
             for (String tar : getTarList(Name)) {
                 res.add(getValueListByTar(Name, tar).get(getKeyPosition(Name, Key)));
             }
@@ -475,7 +599,8 @@ public class Main {
             EmptyDataBaseNameException,
             KeyMapUninitialException,
             NoExistTargetException,
-            NoExistReferenceException {
+            NoExistReferenceException,
+            AttributeException {
         ArrayList<String> test = new ArrayList<>();
         ArrayList<String> test2 = new ArrayList<>();
         BuildDB("Carole", test);//建库   1
@@ -514,9 +639,13 @@ public class Main {
         getRow("Carole!", "FirstKey");//获得一整列(指定类别所有值)   12
         getRef("Carole!");//获得描述   13
 
-        System.out.println(dataBaseToString(DB));
+        modifyAttDB("Carole", 0, READ_ONLY);
+        modifyAttDB("Carole!", 1, "Att2");
+        System.out.println(dataBaseToString());
     }
 }
+
+
 
 /*
 class EmptyDataBaseNameException extends Exception{
@@ -579,6 +708,16 @@ class KeyMapUninitialException extends Exception {
     }
 
     public KeyMapUninitialException (String message) {
+        super(message);
+    }
+}
+class AttributeException extends Exception{
+
+    public AttributeException() {
+        super();
+    }
+
+    public AttributeException(String message) {
         super(message);
     }
 }
