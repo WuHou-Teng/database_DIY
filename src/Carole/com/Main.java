@@ -143,9 +143,9 @@ public class Main {
             if (attr.equals(LOCK)) {
                 throw new AttributeException("<ERROR> getDataBase:Access denied");
             } else if (attr.equals(READ_ONLY)) {
-                return new HashMap<>(DB.get(name));
+                return new HashMap<>(DB.get(name)); //返回一个只读的 databaseMap
             } else if (attr.equals(READ_WRITE)) {
-                return DB.get(name);
+                return DB.get(name); //返回 databaseMap 原文件
             } else {
                 throw new AttributeException("<ERROR> getDataBase:UNKNOWN Attribute");
             }
@@ -208,7 +208,7 @@ public class Main {
         } else {
             System.out.println(getTime() +
                     "<INFO>getTarList:Successfully get getTarList form Database <" +
-                    name + ">,but that\\\\'s an empty list");
+                    name + ">,but that's an empty list");
         }
         return getDataBase(name).get("Tar").get("Tar");
     }
@@ -281,7 +281,7 @@ public class Main {
         } else {
             System.out.println(getTime() +
                     "<INFO>getKeyList:Successfully get KeyList form Database <" +
-                    name + ">,but that\\\\'s an empty list");
+                    name + ">,but that's an empty list");
         }
         return getDataBase(name).get("Key").get("Key");
     }
@@ -306,7 +306,7 @@ public class Main {
      * 获得 Key 在 KeyList中的位置
      *
      * @param name 数据库名字
-     * @param key Key的名字
+     * @param key  Key的名字
      * @return 对应的 key 在 KeyList 中的位置
      */
     public static int getKeyPosition(String name, String key) throws
@@ -327,7 +327,7 @@ public class Main {
      * 修改数据库说明
      *
      * @param name 数据库名字
-     * @param ref 想要用于更新的 reference 字符串
+     * @param ref  想要用于更新的 reference 字符串
      */
     public static void setRef(String name, String ref) {
         try {
@@ -344,84 +344,79 @@ public class Main {
     }
 
     /**
-     * 添加Key
+     * 添加 Key
      *
      * @param Name 数据库的名字
      * @param key  key的名字
      */
     public static void addKey(String Name, String key) {
         try {
-            // 如果key的名字不为空
-            if (!key.equals("")) {
-                // 这里的get返回对应的Object
-                // 于是乎，通过get(key)，获得了底层的Key List, 再把刚刚的key加上去。
-                DB.get(Name).get("Key").get("Key").add(key);
-                // 如对Name对应的TarMap中TarList的长度大于1
-                // 即，已经存在一个或以上的Tar
-                if ((DB.get(Name).get("Tar").get("Tar")).size() >= 1) {
-                    // 循环TarList
-                    for (int i = 0; i <= (DB.get(Name).get("Tar").get("Tar")).size() - 1; i++) {
-                        // 为每一个ValueMap 中对应的Tar 对应的ArrayList添加一个 "null", 作为初始化。
-                        //DB.get(Name).get("Value").get((DB.get(Name).get("Tar").get("Tar")).get(i)) = new ArrayList<>();
-                        DB.get(Name).get("Value").get((DB.get(Name).get("Tar").get("Tar")).get(i)).add("null");
-                        //getValueListByTar(Name, getTarList(Name).get(i)).add("null");
-                    }
-                    System.out.println(getTime() + "<INFO>DBkey:Successfully add key <" + key + "> to <" + Name + ">");
-                }
+            if (getAttrList(Name).get(0).equals(READ_ONLY)) {
+                System.err.println("<ERROR>addKey:Database is Read only, cannot be modified");
             } else {
-                System.err.println("<ERROR>DBkey:Empty Key name!");
+                getKeyList(Name).add(key);
+                if ((getTarList(Name)).size() >= 1) {
+                    for (int i = 0; i <= (getTarList(Name)).size() - 1; i++) {
+                        getValueListByTar(Name, getTarList(Name).get(i)).add("null");
+                    }
+                    System.out.println(getTime() + "<INFO>addKey:Successfully add key <" + key + "> to <" + Name + ">");
+                }
             }
-            
         } catch (Exception e) {
-            System.err.println("<ERROR>DBkey:KeyAdd failed!");
+            System.err.println("<ERROR>addKey:KeyAdd failed!");
             e.printStackTrace();
         }
     }
 
+    /**
+     * 添加 Tar
+     *
+     * @param Name 数据库的名字
+     * @param Tar  target的名字
+     */
     public static void addTar(String Name, String Tar) {
         try {
-            // 如果参数 Tar不为空
-            if (!Tar.equals("")) {
-                // 创建 cList
+            if (getAttrList(Name).get(0).equals(READ_ONLY)) {
+                System.err.println("<ERROR>addKey:Database is Read only, cannot be modified");
+            } else {
                 ArrayList<String> c = new ArrayList<>();
-                // 将参数Tar添加到Name对应DB下的TarList
-                DB.get(Name).get("Tar").get("Tar").add(Tar);
-                // 如果Name对应DB下的keyList不为空，则遍历KeyList中的每一个数值，并向c中添加“null”
-                if (DB.get(Name).get("Key").get("Key").size() >= 1) {
-                    for (int i = 0; i <= DB.get(Name).get("Key").get("Key").size() - 1; i++) {
+                getTarList(Name).add(Tar);
+                if (getKeyList(Name).size() >= 1) {
+                    for (int i = 0; i < getKeyList(Name).size(); i++) {
                         c.add("null");
                     }
                 }
-                // 在ValueMap中创建新的Entry，<Tar, cuo>
-                DB.get(Name).get("Value").put(Tar, c);
-                System.out.println(getTime() + "<INFO>DBkey:Successfully add target <" + Tar + "> to <" + Name + ">");
-            } else {
-                System.err.println(getTime() + "<ERROR>DBTar:Empty Tar name!");
+                getDataBase(Name).get("Value").put(Tar, c);
             }
         } catch (Exception e) {
-            System.err.println(getTime() + "<ERROR>DBTar:TarAdd failed!");
+            System.err.println(getTime() + "<ERROR>addTar:TarAdd failed!");
             e.printStackTrace();
         }
     }
 
+    /**
+     * TODO 感觉那些抛出我都覆盖到了，就全删了，你自己查一下。
+     */
     public static void addValue(String Name, String Tar, String Key, String Value) {
         try {
-            if (!Name.equals("") & !Tar.equals("") & !Key.equals("")) {
-                if (!(DB.get(Name) == null)) {
-                    if (DB.get(Name).get("Key").get("Key").indexOf(Key) != -1) {
-                        DB.get(Name).get("Value").get(Tar).set(DB.get(Name).get("Key").get("Key").indexOf(Key), Value);
-                        System.out.println(getTime() + "<INFO>DBkey:Successfully set Value <" + Value + "> to <" + Name + " , " + Tar + " , " + Key + ">");
-                    } else {
-                        System.err.println(getTime() + "<ERROR>DBValue:Database " + Name + " didnot contain Key " + Key + "!");
-                    }
-                } else {
-                    System.err.println(getTime() + "<ERROR>DBValue:Database " + Name + " non-existent!");
-                }
-            } else {
-                System.err.println(getTime() + "<ERROR>DBValue:Incorrect parameter!");
-            }
+            //if (!Name.equals("") & !Tar.equals("") & !Key.equals("")) {
+            //    if (!(DB.get(Name) == null)) {
+            //        if (DB.get(Name).get("Key").get("Key").indexOf(Key) != -1) {
+            //            DB.get(Name).get("Value").get(Tar).set(DB.get(Name).get("Key").get("Key").indexOf(Key), Value);
+            //            System.out.println(getTime() + "<INFO>addValue:Successfully set Value <" + Value + "> to <" + Name + " , " + Tar + " , " + Key + ">");
+            //        } else {
+            //            System.err.println(getTime() + "<ERROR>addValue:Database " + Name + " didnot contain Key " + Key + "!");
+            //        }
+            //    } else {
+            //        System.err.println(getTime() + "<ERROR>addValue:Database " + Name + " non-existent!");
+            //    }
+            //} else {
+            //    System.err.println(getTime() + "<ERROR>addValue:Incorrect parameter!");
+            //}
+            getValueListByTar(Name, Tar).set(getKeyPosition(Name, Key), Value);
+            System.out.println(getTime() + "<INFO>addValue:Successfully set Value <" + Value + "> to <" + Name + " , " + Tar + " , " + Key + ">");
         } catch (Exception e) {
-            System.err.println(getTime() + "<ERROR>DBValue:ValueAdd failed!");
+            System.err.println(getTime() + "<ERROR>addValue:ValueAdd failed!");
             e.printStackTrace();
         }
     }
@@ -463,18 +458,14 @@ public class Main {
                 System.out.println("==================");
                 System.out.println(Fmt.format(new Date()) + "<INFO>DBprinter:Successfully printed <" + Name + ">, " + counter + "Value were installed.");
                 System.out.println(getTime() + "<INFO>DBprinter:Successfully printed <" + Name + ">");
-                return;
             } catch (Exception e) {
                 System.err.println(getTime() + "<ERROR>:DBprinter:printDB <" + Name + "> failed!");
                 e.printStackTrace();
-                return;
             }
         } else {
             System.err.println(getTime() + "<ERROR>:DBprinter:Non-existent Database <" + Name + ">");
-            return;
         }
     }
-
 
     /**
      * 补位函数
