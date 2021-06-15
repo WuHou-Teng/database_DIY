@@ -1,16 +1,32 @@
 package WuHou.org.flags;
 
 import java.security.KeyPair;
+import WuHou.org.attributes.ReWr;
 
 public class Flag {
     /** flag 的名字 */
     private String flag;
     /** flag 的编号 */
     private int id;
+    /** 读写权限 */
+    private ReWr permission;
 
     public Flag(String flag) {
         this.flag = flag;
         this.id = 0;
+        permission = ReWr.READ_WRITE;
+    }
+
+    public Flag(String flag, int id) {
+        this.flag = flag;
+        this.id = id;
+        permission = ReWr.READ_WRITE;
+    }
+
+    public Flag(String flag, int id, ReWr permission){
+        this.flag = flag;
+        this.id = id;
+        this.permission = permission;
     }
 
     public String getName() {
@@ -30,9 +46,17 @@ public class Flag {
         return id;
     }
 
+    public ReWr getPermission() {
+        return permission;
+    }
+
+    protected void setPermission(ReWr permission) {
+        this.permission = permission;
+    }
+
     @Override
     public String toString() {
-        return String.format("<%s, %d>", this.getName(), this.getId());
+        return String.format("<%s, %d, %s>", this.getName(), this.getId(), this.permission);
     }
 
     /**

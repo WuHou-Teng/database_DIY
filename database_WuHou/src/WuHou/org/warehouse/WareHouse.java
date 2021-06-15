@@ -17,7 +17,9 @@ import java.util.Map;
  * 就是一个存放了多个 DataBase 的包装袋
  */
 public class WareHouse {
-    /** 用于记录数据库被添加的顺序 */
+    /**
+     * 用于记录数据库被添加的顺序
+     */
     private final ArrayList<DataBase> wareHouseOrdered;
 
     /**
@@ -29,10 +31,19 @@ public class WareHouse {
      */
     private final HashMap<String, DataBase> wareHouseTime;
 
-    /** 用于键值引索 */
+    /**
+     * 用于键值引索
+     */
     private final HashMap<String, DataBase> wareHouseEntry;
 
-    /** 时间反馈 */
+    /**
+     * 数据库指针目前指向的 database
+     */
+    private int dBPointer; //数据库数量过多，或者循环次数过多的时候，可能出现隐患。
+
+    /**
+     * 时间反馈
+     */
     static SimpleDateFormat Fmt = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss:ms");
     //Fmt.format(new Date())
 
@@ -43,6 +54,7 @@ public class WareHouse {
         this.wareHouseOrdered = new ArrayList<>();
         this.wareHouseEntry = new HashMap<>();
         this.wareHouseTime = new HashMap<>();
+        this.dBPointer = 0;
     }
 
     /**
@@ -50,6 +62,20 @@ public class WareHouse {
      */
     protected String getTime() {
         return String.format("|%s|", Fmt.format(new Date()));
+    }
+
+    /**
+     * 获取 DBPointer
+     */
+    public int getDBPointer() {
+        return dBPointer;
+    }
+
+    /**
+     * 指针+1
+     */
+    public void updateDBPointer() {
+        this.dBPointer++;
     }
 
     /**
@@ -107,6 +133,7 @@ public class WareHouse {
 
     /**
      * 提取 DataBase (通过键值)
+     *
      * @return DataBase if it is in
      * @throws NoDataBaseExistException if no DataBase found in wareHouse
      */
@@ -119,8 +146,14 @@ public class WareHouse {
     }
 
     /**
-     * 提取 DataBase (通过创建顺序)
+     * 提取正在处理的 DataBase (通过创建顺序)
+     * 用于遍历所有的 database, 且每次调用都只返回一个database, 再次调用指向下一个database。
      */
+    public DataBase getDatabaseCycle() {
+        int pointerIndex = getDBPointer() % getWareHouseOrdered().size();
+        updateDBPointer();
+        return this.getWareHouseOrdered().get(pointerIndex);
+    }
 
 
     /**
@@ -165,7 +198,7 @@ public class WareHouse {
      * 有无出现数据量不对等的情况。
      * TODO
      */
-    public boolean verify (String DataBaseName) {
+    public boolean verify(String DataBaseName) {
         return true;
     }
 
@@ -192,15 +225,15 @@ public class WareHouse {
                     entry.getValue().getTimeCreated()));
             // 遍历所有 key 作为表格第一行
             wareHouseS.append("________| ");
-            for (Key keys : entry.getValue().getKeys()){
+            for (Key keys : entry.getValue().getKeys()) {
                 wareHouseS.append(String.format("%s ", lengthAlert(keys.getName())));
             }
             wareHouseS.append("\n");
             // 遍历Tar的长度（这里Tar的长度应该和dataBase.的外层长度相同。
-            for (int i = 0; i < entry.getValue().getTargets().size(); i ++) {
+            for (int i = 0; i < entry.getValue().getTargets().size(); i++) {
                 wareHouseS.append(lengthAlert(entry.getValue().getTargets().get(i).getName()));
                 wareHouseS.append("| ");
-                for (String value : entry.getValue().getValues().get(i)) {
+                for (String value : entry.getValue().getValuesList().get(i)) {
                     wareHouseS.append(String.format("%s ", lengthAlert(value)));
                 }
                 wareHouseS.append("\n");
