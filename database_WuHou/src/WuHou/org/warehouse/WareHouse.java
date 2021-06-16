@@ -1,5 +1,6 @@
 package WuHou.org.warehouse;
 
+import WuHou.org.attributes.ReWr;
 import WuHou.org.flags.*;
 import WuHou.org.util.DataBaseDuplicateException;
 import WuHou.org.util.NoDataBaseExistException;
@@ -44,7 +45,7 @@ public class WareHouse {
     /**
      * 时间反馈
      */
-    static SimpleDateFormat Fmt = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss:ms");
+    public static SimpleDateFormat Fmt = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss:ms");
     //Fmt.format(new Date())
 
     /**
@@ -132,6 +133,27 @@ public class WareHouse {
     }
 
     /**
+     * 权限过滤, 通过输入database来返回 database，本质目的只是单纯的检测该 database的权限。
+     */
+    private DataBase permissionCheck(DataBase dataBase) throws NoDataBaseExistException {
+        if (dataBase.getPermission() == ReWr.READ_WRITE) {
+            return dataBase;
+        } else if (dataBase.getPermission() == ReWr.READ_ONLY) {
+            return new DataBase(dataBase);
+        } else if (dataBase.getPermission() == ReWr.LOCK) {
+            throw new NoDataBaseExistException(
+                    "<ERROR> getDatabase: could not find database or maybe hidden, with name "
+                            + dataBase.getName());
+        } else {
+            // 数据库的权限出现异常，因此默认为LOCK，并抛出异常
+            this.wareHouseEntry.get(dataBase.getName()).setPermission(ReWr.LOCK);
+            throw new NoDataBaseExistException(
+                    "<ERROR> getDatabase: could not find database or maybe hidden, with name "
+                            + dataBase.getName());
+        }
+    }
+
+    /**
      * 提取 DataBase (通过键值)
      *
      * @return DataBase if it is in
@@ -139,9 +161,31 @@ public class WareHouse {
      */
     public DataBase getDatabase(String dataBaseName) throws NoDataBaseExistException {
         if (this.wareHouseEntry.containsKey(dataBaseName)) {
-            return this.wareHouseEntry.get(dataBaseName);
+            //if (this.wareHouseEntry.get(dataBaseName).getPermission() == ReWr.READ_WRITE) {
+            //    return this.wareHouseEntry.get(dataBaseName);
+            //} else if (this.wareHouseEntry.get(dataBaseName).getPermission() == ReWr.READ_ONLY) {
+            //    return new DataBase(this.wareHouseEntry.get(dataBaseName));
+            //} else if (this.wareHouseEntry.get(dataBaseName).getPermission() == ReWr.LOCK) {
+            //    throw new NoDataBaseExistException(
+            //            "<ERROR> getDatabase: could not find database or maybe hidden with name "
+            //                    + dataBaseName);
+            //} else {
+            //    // 数据库的权限出现异常，因此默认为LOCK，并抛出异常
+            //    this.wareHouseEntry.get(dataBaseName).setPermission(ReWr.LOCK);
+            //    throw new NoDataBaseExistException(
+            //            "<ERROR> getDatabase: could not find database or maybe hidden with name "
+            //                    + dataBaseName);
+            //}
+            try {
+                return permissionCheck(this.wareHouseEntry.get(dataBaseName));
+            } catch (NoDataBaseExistException e) {
+                e.printStackTrace();
+                return null;
+            }
         } else {
-            throw new NoDataBaseExistException("<ERROR> getDatabase: could not find database");
+            throw new NoDataBaseExistException(
+                    "<ERROR> getDatabase: could not find database with name "
+                            + dataBaseName);
         }
     }
 
@@ -152,9 +196,13 @@ public class WareHouse {
     public DataBase getDatabaseCycle() {
         int pointerIndex = getDBPointer() % getWareHouseOrdered().size();
         updateDBPointer();
-        return this.getWareHouseOrdered().get(pointerIndex);
+        try {
+            return permissionCheck(this.getWareHouseOrdered().get(pointerIndex));
+        } catch (NoDataBaseExistException e) {
+            // 如果之前那个因为权限无法输出，则自动进入下一个
+            return getDatabaseCycle();
+        }
     }
-
 
     /**
      * 提取 DataBase (通过创建日期)
@@ -163,12 +211,38 @@ public class WareHouse {
      * @return DataBase if it is in
      * @throws NoDataBaseExistException if no DataBase found in wareHouse
      */
-    public DataBase getDatabaseByDate(String time) throws NoDataBaseExistException {
+    public DataBase getDatabaseByTime(String time) throws NoDataBaseExistException {
         if (this.wareHouseTime.containsKey(time)) {
-            return this.wareHouseTime.get(time);
+            try {
+                return permissionCheck(this.wareHouseTime.get(time));
+            } catch (NoDataBaseExistException e) {
+                e.printStackTrace();
+                return null;
+            }
         } else {
             throw new NoDataBaseExistException("<ERROR getDatabaseByDate: No dataBase created at that time>");
         }
+    }
+
+    /**
+     * 提取 DataBase (通过创建日期)(模糊搜索，即只要时间 key中有符合的字符串段，就输出。)
+     *
+     * @param date 待搜索的时间段
+     * @return dBInDate 包含所有符合时间段内的 database (被上锁的除外)
+     */
+    public ArrayList<DataBase> getDatabaseByDateRange(String date) {
+        ArrayList<DataBase> dBInDate = new ArrayList<>();
+        for (Map.Entry<String, DataBase> entry : this.wareHouseTime.entrySet()) {
+            if (entry.getKey().contains(date)) {
+                try {
+                    dBInDate.add(permissionCheck(entry.getValue()));
+                } catch (NoDataBaseExistException e) {
+                    System.out.println("Jump through a dataBase which has been locked.");
+                    //continue;
+                }
+            }
+        }
+        return dBInDate;
     }
 
     /**
@@ -204,7 +278,7 @@ public class WareHouse {
 
     /**
      * 重写 toString() 方法
-     * TODO  添加 Try block
+     * TODO  该方法中没有调用verify，也没有检测权限。纯粹是我懒了。
      */
     @Override
     public String toString() {
@@ -216,7 +290,6 @@ public class WareHouse {
                 wareHouseS.append("==============================================\n");
                 wareHouseS.append(String.format("<Error> Database [%s] has some problem.\n",
                         entry.getKey()));
-                //wareHouseS.append("==============================================\n");
             }
             // 间隔符
             wareHouseS.append("==============================================\n");
