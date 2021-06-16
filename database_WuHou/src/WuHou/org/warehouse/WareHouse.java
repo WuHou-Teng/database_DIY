@@ -62,7 +62,7 @@ public class WareHouse {
      * 获取时间字符串
      */
     protected String getTime() {
-        return String.format("|%s|", Fmt.format(new Date()));
+        return String.format("%s", Fmt.format(new Date()));
     }
 
     /**
@@ -136,6 +136,7 @@ public class WareHouse {
      * 权限过滤, 通过输入database来返回 database，本质目的只是单纯的检测该 database的权限。
      */
     private DataBase permissionCheck(DataBase dataBase) throws NoDataBaseExistException {
+        dataBase.setLastEditedTime(getTime());
         if (dataBase.getPermission() == ReWr.READ_WRITE) {
             return dataBase;
         } else if (dataBase.getPermission() == ReWr.READ_ONLY) {
@@ -161,21 +162,6 @@ public class WareHouse {
      */
     public DataBase getDatabase(String dataBaseName) throws NoDataBaseExistException {
         if (this.wareHouseEntry.containsKey(dataBaseName)) {
-            //if (this.wareHouseEntry.get(dataBaseName).getPermission() == ReWr.READ_WRITE) {
-            //    return this.wareHouseEntry.get(dataBaseName);
-            //} else if (this.wareHouseEntry.get(dataBaseName).getPermission() == ReWr.READ_ONLY) {
-            //    return new DataBase(this.wareHouseEntry.get(dataBaseName));
-            //} else if (this.wareHouseEntry.get(dataBaseName).getPermission() == ReWr.LOCK) {
-            //    throw new NoDataBaseExistException(
-            //            "<ERROR> getDatabase: could not find database or maybe hidden with name "
-            //                    + dataBaseName);
-            //} else {
-            //    // 数据库的权限出现异常，因此默认为LOCK，并抛出异常
-            //    this.wareHouseEntry.get(dataBaseName).setPermission(ReWr.LOCK);
-            //    throw new NoDataBaseExistException(
-            //            "<ERROR> getDatabase: could not find database or maybe hidden with name "
-            //                    + dataBaseName);
-            //}
             try {
                 return permissionCheck(this.wareHouseEntry.get(dataBaseName));
             } catch (NoDataBaseExistException e) {
@@ -258,12 +244,9 @@ public class WareHouse {
             // 0123456_|
             return String.format("%s_", content.substring(0, 7));
         } else {
-            StringBuilder text = new StringBuilder();
             // 0123
             // 0123____|
-            text.append(content);
-            text.append(" ".repeat(8 - content.length()));
-            return text.toString();
+            return content + " ".repeat(8 - content.length());
         }
     }
 
@@ -293,9 +276,14 @@ public class WareHouse {
             }
             // 间隔符
             wareHouseS.append("==============================================\n");
-            // dataBase 名字和创建时间
-            wareHouseS.append(String.format("[%s] Data: %s\n", entry.getKey(),
-                    entry.getValue().getTimeCreated()));
+            // dataBase 名字和数据库描述
+            wareHouseS.append(String.format("[%s] \nRef: %s\n", entry.getKey(), entry.getValue().getReference()));
+            // dataBase 读写权限
+            wareHouseS.append(String.format("Permission: /%s/\n", entry.getValue().getPermission().name()));
+            // 创建时间
+            wareHouseS.append((String.format("Created on:        |%s|\n", entry.getValue().getTimeCreated())));
+            // 最后查看时间
+            wareHouseS.append((String.format("Last checked time: |%s|\n", entry.getValue().getTimeCreated())));
             // 遍历所有 key 作为表格第一行
             wareHouseS.append("________| ");
             for (Key keys : entry.getValue().getKeys()) {
@@ -313,5 +301,32 @@ public class WareHouse {
             }
         }
         return wareHouseS.toString();
+    }
+
+    public static void main(String[] args) throws NoDataBaseExistException {
+        WareHouse wh = new WareHouse();
+        wh.newDataBase("WuHou");
+        wh.newDataBase("Carole");
+        try {
+            wh.getDatabase("WuHou").addTar("MyCarole");
+            wh.getDatabase("WuHou").addKey("MyCarole");
+            wh.getDatabase("WuHou").addValue("Yeah!!!", "MyCarole", "MyCarole");
+            wh.getDatabase("WuHou").addNamedKeys(5,"CarolK");
+            wh.getDatabase("WuHou").addNamedTars(5,"CarolT");
+            wh.getDatabase("WuHou").setReference("My Carole!~~");
+            wh.getDatabase("WuHou").memsetValueRange("0", 1, 4, 1,4);
+            wh.getDatabase("WuHou").memsetValueRange("♡", 2, 3, 2,3);
+            wh.getDatabase("WuHou").memsetValueRange("*", "CarolT4","CarolT4","CarolK0","CarolK3");
+
+            //wh.getDatabase("Carole").addNamedKeys(5, "LingK");
+            //wh.getDatabase("Carole").addNamedTars(5, "LingT");
+            wh.getDatabase("Carole").formNamedValued(6, 6, "[☭]", "Ling", "Ling");
+        } catch (NoDataBaseExistException e) {
+            e.printStackTrace();
+        } catch (Exception e2) {
+            System.err.println("发生了什么？");
+            e2.printStackTrace();
+        }
+        System.out.println(wh.toString());
     }
 }

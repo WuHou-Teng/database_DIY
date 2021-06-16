@@ -4,7 +4,9 @@ import WuHou.org.attributes.ReWr;
 import WuHou.org.flags.*;
 import WuHou.org.util.*;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -12,14 +14,6 @@ import java.util.Map;
 public class DataBase {
     // 数据库名字
     private String name;
-    /**
-     * 这里有一个问题，作为一个数据库，它是允许相同的键值的。。。
-     * 为了保留顺序，我是不是应该用 treeMap？
-     * <p>
-     * 我选择继续使用List，
-     * 在 flag 中添加编号属性。
-     * 如果相同，则自动为编号加1.
-     */
     // key 列表
     private ArrayList<Key> keyList;
     // Tar 列表
@@ -35,10 +29,15 @@ public class DataBase {
     private String reference;
 
     /**
+     * 时间反馈
+     */
+    public static SimpleDateFormat Fmt = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss:ms");
+
+    /**
      * 内部矩阵 Map格式，用于完全使用 key 来获得相应的 value
      * 例如：get(Target).get(key)
      */
-    private Map<Target, Map<Key, String>> valueMatrixMap;
+    private final Map<Target, Map<Key, String>> valueMatrixMap;
 
     /**
      * 内部矩阵的 ArrayList 格式，用于完全使用坐标来获得相应的 value
@@ -52,7 +51,7 @@ public class DataBase {
      */
     private final ArrayList<ArrayList<String>> valueMatrixList;
 
-    // 修改权限
+    // 权限
     private ReWr permission;
 
     /**
@@ -103,40 +102,83 @@ public class DataBase {
         return new ArrayList<>(targetList);
     }
 
+    // 获得value矩阵的List形式
     public ArrayList<ArrayList<String>> getValuesList() {
         return new ArrayList<>(this.valueMatrixList);
     }
 
+    // 获得value矩阵的Map形式
     public Map<Target, Map<Key, String>> getValuesMap() {
         return new HashMap<>(this.valueMatrixMap);
     }
 
+    // 获得数据库创建时间
     public String getTimeCreated() {
         return timeCreated;
     }
 
+    // 获得数据库最后更新的时间
     public String getLastEditedTime() {
         return lastEditedTime;
     }
 
+    // 获取时间字符串
+    protected String getTime() {
+        return String.format("|%s|", Fmt.format(new Date()));
+    }
+
+    // 更新数据库最后更新的时间
+    public void updateLastEditedTime() {
+        this.lastEditedTime = getTime();
+    }
+
+    // 设定数据库最后更新的时间
     public void setLastEditedTime(String lastEditedTime) {
         this.lastEditedTime = lastEditedTime;
     }
 
+    // 获取数据库描述
     public String getReference() {
         return reference;
     }
 
+    // 设定数据库描述
     public void setReference(String reference) {
         this.reference = reference;
     }
 
+    // 查询数据库读写权限
     public ReWr getPermission() {
         return permission;
     }
 
+    // 设定数据库读写权限
     public void setPermission(ReWr permission) {
         this.permission = permission;
+    }
+
+    /**
+     * 获取输入的 Key在 KeyList中的位置
+     */
+    public int getKeyPosition(Key key) throws NoExistKeyException {
+        if (getKeys().contains(key)) {
+            return getKeys().indexOf(key);
+        } else {
+            throw new NoExistKeyException(
+                    "<ERROR> getKeyPosition: Key to be search not exit: " + key.toString());
+        }
+    }
+
+    /**
+     * 获取输入的 Target在 TarList中的位置
+     */
+    public int getTarPosition(Target tar) throws NoExistTargetException {
+        if (getTargets().contains(tar)) {
+            return getTargets().indexOf(tar);
+        } else {
+            throw new NoExistTargetException(
+                    "<ERROR> getTarPosition: Target to be search not exit: " + tar.toString());
+        }
     }
 
     /**
@@ -172,24 +214,53 @@ public class DataBase {
     }
 
     /**
+     * value矩阵的数据更新
+     *
+     * @param tar 更新方式是新加入了一个tar
+     */
+    private void updateValueMatrix(Target tar) {
+        ArrayList<String> newValueList = new ArrayList<>();
+        HashMap<Key, String> newValueMap = new HashMap<>();
+        if (getKeys().size() > 0) {
+            for (Key key : getKeys()) {
+                newValueMap.put(key, "null");
+                newValueList.add("null");
+            }
+        }
+        this.valueMatrixList.add(newValueList);
+        this.valueMatrixMap.put(tar, newValueMap);
+    }
+
+    /**
+     * value矩阵的数据更新
+     *
+     * @param key 更新方式是新加入了一个key
+     */
+    private void updateValueMatrix(Key key) {
+        if (getTargets().size() > 0) {
+            for (Target tars : getTargets()) {
+                this.valueMatrixMap.get(tars).put(key, "null");
+            }
+            for (int i = 0; i < getTargets().size(); i++) {
+                this.valueMatrixList.get(i).add("null");
+            }
+        }
+    }
+
+    /**
      * 提供已经创建好的 Tar 来添加 Tar【默认】
      * 如果有名字重复，则直接报错
      *
      * @param tar Target 对象
      */
-    public void addTar(Target tar) throws
-            NoExistTargetException, NoExistKeyException, FlagDuplicateException {
+    public void addTar(Target tar) throws FlagDuplicateException {
         for (Target tars : getTargets()) {
             if (tars.getName().equals(tar.getName())) {
                 throw new FlagDuplicateException("<ERROR> addTar: Target name duplicated.");
             }
         }
         this.targetList.add(tar);
-        if (getKeys().size() > 0) {
-            for (Key key : getKeys()) {
-                addValue("Null", tar, key);
-            }
-        }
+        updateValueMatrix(tar);
     }
 
     /**
@@ -198,8 +269,7 @@ public class DataBase {
      *
      * @param tarName 新Target的对象的名字
      */
-    public void addTar(String tarName) throws
-            NoExistTargetException, NoExistKeyException, FlagDuplicateException {
+    public void addTar(String tarName) throws FlagDuplicateException {
         Target tar = new Target(tarName);
         addTar(tar);
     }
@@ -210,21 +280,14 @@ public class DataBase {
      *
      * @param key Key 对象
      */
-    public void addKey(Key key) throws
-            NoExistTargetException,
-            NoExistKeyException,
-            FlagDuplicateException {
+    public void addKey(Key key) throws FlagDuplicateException {
         for (Key keys : getKeys()) {
             if (keys.getName().equals(key.getName())) {
                 throw new FlagDuplicateException("<ERROR> addKey: Key name duplicated.");
             }
         }
         this.keyList.add(key);
-        if (getKeys().size() > 0) {
-            for (Target tar : getTargets()) {
-                addValue("Null", tar, key);
-            }
-        }
+        updateValueMatrix(key);
     }
 
     /**
@@ -233,10 +296,7 @@ public class DataBase {
      *
      * @param keyName 新的key的名字
      */
-    public void addKey(String keyName) throws
-            NoExistTargetException,
-            NoExistKeyException,
-            FlagDuplicateException {
+    public void addKey(String keyName) throws FlagDuplicateException {
         Key key = new Key(keyName);
         addKey(key);
     }
@@ -247,7 +307,7 @@ public class DataBase {
      *
      * @param tar Target 对象
      */
-    public void addTarAdv(Target tar) throws NoExistTargetException, NoExistKeyException {
+    public void addTarAdv(Target tar) {
         for (Target tars : getTargets()) {
             if (tars.equals(tar)) {
                 tar.updateId();
@@ -258,11 +318,7 @@ public class DataBase {
                     tar.getName(), tar.getId());
         }
         this.targetList.add(tar);
-        if (getKeys().size() > 0) {
-            for (Key key : getKeys()) {
-                addValue("Null", tar, key);
-            }
-        }
+        updateValueMatrix(tar);
     }
 
     /**
@@ -271,7 +327,7 @@ public class DataBase {
      *
      * @param tarName 新Target的对象的名字
      */
-    public void addTarAdv(String tarName) throws NoExistTargetException, NoExistKeyException {
+    public void addTarAdv(String tarName) {
         Target tar = new Target(tarName);
         addTarAdv(tar);
     }
@@ -282,7 +338,7 @@ public class DataBase {
      *
      * @param key Key 对象
      */
-    public void addKeyAdv(Key key) throws NoExistTargetException, NoExistKeyException {
+    public void addKeyAdv(Key key) {
         for (Key keys : getKeys()) {
             if (keys.equals(key)) {
                 key.updateId();
@@ -293,11 +349,7 @@ public class DataBase {
                     key.getName(), key.getId());
         }
         this.keyList.add(key);
-        if (getKeys().size() > 0) {
-            for (Target tar : getTargets()) {
-                addValue("Null", tar, key);
-            }
-        }
+        updateValueMatrix(key);
     }
 
     /**
@@ -306,7 +358,7 @@ public class DataBase {
      *
      * @param keyName the name of New key
      */
-    public void addKeyAdv(String keyName) throws NoExistTargetException, NoExistKeyException {
+    public void addKeyAdv(String keyName) {
         Key key = new Key(keyName);
         addKeyAdv(key);
     }
@@ -315,18 +367,12 @@ public class DataBase {
      * 自动添加 length 数量的 key，key的名字采用 name+[0-99]
      *
      * @param length the number of keys gonna be add to database
-     * @param name the base name of keys
+     * @param name   the base name of keys
      */
-    public void addNamedKeys(int length, String name){
+    public void addNamedKeys(int length, String name) {
         int i = 0;
         while (i < length) {
-            try {
-                // 强制添加
-                addKeyAdv(name + i);
-            } catch (NoExistTargetException | NoExistKeyException e1) {
-                e1.printStackTrace();
-                //here shouldn't has these exception
-            }
+            addKeyAdv(name + i);
             i++;
         }
     }
@@ -344,18 +390,12 @@ public class DataBase {
      * 自动添加 length 数量的 tar，tar的名字采用默认值 name+[0-99]
      *
      * @param length the number of targets gonna be add to database
-     * @param name the base name of targets
+     * @param name   the base name of targets
      */
     public void addNamedTars(int length, String name) {
         int i = 0;
         while (i < length) {
-            try {
-                // 强制添加
-                addTarAdv(name + i);
-            } catch (NoExistTargetException | NoExistKeyException e1) {
-                e1.printStackTrace();
-                //here shouldn't has these exception
-            }
+            addTarAdv(name + i);
             i++;
         }
     }
@@ -369,15 +409,64 @@ public class DataBase {
         addNamedTars(length, "Tar");
     }
 
+
     /**
-     * 自动创建表格，方式是分别调用 addDefaultKeys 和 addDefaultTars
+     * 创建表格，方式是分别调用 addDefaultKeys 和 addDefaultTars
      *
      * @param tarLength the number of targets gonna be add to database
      * @param keyLength the number of keys gonna be add to database
      */
-    public void createFormTK(int tarLength, int keyLength) {
+    public void form(int tarLength, int keyLength) {
         addDefaultTars(tarLength);
         addDefaultKeys(keyLength);
+    }
+
+    /**
+     * 创建表格，该方法允许自定义表格的横竖名称
+     *
+     * @param tarLength the number of targets gonna be add to database
+     * @param keyLength the number of keys gonna be add to database
+     */
+    public void formNamed(int tarLength, int keyLength,
+                                  String tarBase, String keyBase) {
+        addNamedTars(tarLength, tarBase);
+        addNamedKeys(keyLength, keyBase);
+    }
+
+    /**
+     * 创建表格，并将表格内的数据初始化为输入的数值value
+     */
+    public void formValued(int tarLength, int keyLength, String value) throws
+            NoExistTargetException,
+            NoExistKeyException,
+            FlagDuplicateException {
+        String ts = "Tar" + "0";
+        String te = "Tar" + (tarLength - 1);
+        String ks = "Key" + "0";
+        String ke = "Key" + (keyLength - 1);
+        addDefaultKeys(keyLength);
+        addDefaultTars(tarLength);
+        memsetValueRange(value, ts, te, ks, ke);
+    }
+
+    /**
+     * 创建表格，该方法允许自定义表格的横竖名称，并将表格内的数据初始化为输入的数值value
+     */
+    public void formNamedValued (int tarLength,
+                                 int keyLength,
+                                 String value,
+                                 String tarBase,
+                                 String keyBase) throws
+            NoExistTargetException,
+            NoExistKeyException,
+            FlagDuplicateException {
+        String ts = tarBase + "0";
+        String te = tarBase + (tarLength - 1);
+        String ks = keyBase + "0";
+        String ke = keyBase + (keyLength - 1);
+        addNamedTars(tarLength, tarBase);
+        addNamedKeys(keyLength, keyBase);
+        memsetValueRange(value, ts, te, ks, ke);
     }
 
     /**
@@ -413,23 +502,18 @@ public class DataBase {
 
         int keyPosition;
         int tarPosition;
-
-        if (this.keyList.contains(key)) {
-            keyPosition = this.keyList.indexOf(key);
-        } else {
+        try {
+            keyPosition = getKeyPosition(key);
+            tarPosition = getTarPosition(tar);
+            this.valueMatrixList.get(tarPosition).set(keyPosition, value);
+            this.valueMatrixMap.get(tar).replace(key, value);
+        } catch (NoExistTargetException e1) {
             throw new NoExistKeyException("<ERROR> addValue: No key in list fits when adding "
-                    + value + " with Tar:" + tar.getName() + " and Key:" + key.getName());
-        }
-
-        if (this.targetList.contains(tar)) {
-            tarPosition = this.targetList.indexOf(tar);
-        } else {
+                    + value + " with Tar:" + tar.toString() + " and Key:" + key.toString());
+        } catch (NoExistKeyException e2) {
             throw new NoExistTargetException("<ERROR> addValue: No target in list fits when adding "
-                    + value + " with Tar:" + tar.getName() + " and Key:" + key.getName());
+                    + value + " with Tar:" + tar.toString() + " and Key:" + key.toString());
         }
-
-        this.valueMatrixList.get(tarPosition).set(keyPosition, value);
-        this.valueMatrixMap.get(tar).replace(key, value);
     }
 
     /**
@@ -502,9 +586,9 @@ public class DataBase {
     /**
      * 添加 value，为对应 Key，以及所有符合名字的 Tar 添加相同的 value
      *
-     * @param value the value to be add to database
+     * @param value   the value to be add to database
      * @param tarName the name of tar to be search in database
-     * @param key the key to be search in database
+     * @param key     the key to be search in database
      * @throws NoExistTargetException when No Target fit tarName
      */
     public void addValueTarFits(String value, String tarName, Key key) throws
@@ -524,8 +608,8 @@ public class DataBase {
     /**
      * 添加 value，为对应 Tar，以及所有符合名字的 Key 添加相同的 value
      *
-     * @param value the value to be add to database
-     * @param tar the tar to be search in database
+     * @param value   the value to be add to database
+     * @param tar     the tar to be search in database
      * @param keyName the name of key to be search in database
      * @throws NoExistKeyException when No Key fit keyName
      */
@@ -545,13 +629,13 @@ public class DataBase {
     /**
      * 为所有符合名字的 (tar, key) 都加上相同的 value
      *
-     * @param value the value to be add to database
+     * @param value   the value to be add to database
      * @param tarName the name of target to be search in database
      * @param keyName the name of key to be search in database
      * @throws NoExistTargetException when No Target fit tarName
-     * @throws NoExistKeyException when No Key fit keyName
+     * @throws NoExistKeyException    when No Key fit keyName
      */
-    public void addValueAll(String value, String tarName, String keyName) throws
+    public void addValueBoth(String value, String tarName, String keyName) throws
             NoExistTargetException, NoExistKeyException {
         ArrayList<Target> tarsFit = getTarsFit(tarName);
         ArrayList<Key> keysFit = getKeysFit(keyName);
@@ -572,6 +656,134 @@ public class DataBase {
         }
     }
 
+    /**
+     * 区域化的更改数据，根据输入的数字确定区域，并将区域内所有的 value都改为输入的 value
+     *
+     * @param value    待更改的数据
+     * @param tarStart TarList的开始位置
+     * @param tarEnd   TarList的结束位置
+     * @param keyStart KeyList的开始位置
+     * @param keyEnd   KeyList的结束位置
+     * @throws NoExistKeyException    keyStart 或者 keyEnd 不存在
+     * @throws NoExistTargetException tarStart 或者 tarEnd 不存在
+     */
+    public void memsetValueRange(String value,
+                                 int tarStart,
+                                 int tarEnd,
+                                 int keyStart,
+                                 int keyEnd) throws
+            NoExistTargetException, NoExistKeyException {
+        if (tarStart >= getTargets().size() || tarEnd >= getTargets().size()
+                || tarStart < 0 || tarEnd < 0) {
+            throw new NoExistTargetException(
+                    "<ERROR> memsetValueRange(SIIII): Given tarPosition out of range: ["
+                            + tarStart + ", " + tarEnd + "]");
+        }
+        if (keyStart >= getKeys().size() || keyEnd >= getKeys().size()
+                || keyStart < 0 || keyEnd < 0) {
+            throw new NoExistKeyException(
+                    "<ERROR> memsetValueRange(SIIII): Given keyPosition out of range: ["
+                            + keyStart + ", " + keyEnd + "]");
+        }
+        int buffer;
+        if (tarStart >= tarEnd) {
+            buffer = tarEnd;
+            tarEnd = tarStart;
+            tarStart = buffer;
+        }
+        if (keyStart >= keyEnd) {
+            buffer = keyEnd;
+            keyEnd = keyStart;
+            keyStart = buffer;
+        }
+
+        for (int t = tarStart; t <= tarEnd; t++) {
+            for (int k = keyStart; k <= keyEnd; k++) {
+                this.valueMatrixList.get(t).set(k, value);
+                //this.valueMatrixMap.get(this.targetList.get(t)).replace(this.keyList.get(k), value);
+                this.valueMatrixMap.get(getTargets().get(t)).replace(getKeys().get(k), value);
+            }
+        }
+    }
+
+    /**
+     * 区域化的更改数据，根据输入的 Flag对象 确定区域，并将区域内所有的 value都改为输入的 value
+     *
+     * @param value    待更改的数据
+     * @param tarStart 开始位置的 target 对象
+     * @param tarEnd   结束位置的 target 对象
+     * @param keyStart 开始位置的 key 对象
+     * @param keyEnd   结束位置的 key 对象
+     * @throws NoExistKeyException    keyStart 或者 keyEnd 不存在
+     * @throws NoExistTargetException tarStart 或者 tarEnd 不存在
+     */
+    public void memsetValueRange(String value,
+                                 Target tarStart,
+                                 Target tarEnd,
+                                 Key keyStart,
+                                 Key keyEnd) throws
+            NoExistTargetException, NoExistKeyException {
+        try {
+            int ts = getTarPosition(tarStart);
+            int te = getTarPosition(tarEnd);
+            int ks = getKeyPosition(keyStart);
+            int ke = getKeyPosition(keyEnd);
+            // 调用上面那个
+            memsetValueRange(value, ts, te, ks, ke);
+        } catch (NoExistTargetException e1) {
+            throw new NoExistTargetException(
+                    "<ERROR> memsetValueRange(STTKK): Tars to be search not exit.\ntarStart: "
+                            + tarStart.toString() + " tarEnd: " + tarEnd.toString());
+        } catch (NoExistKeyException e2) {
+            throw new NoExistKeyException(
+                    "<ERROR> memsetValueRange(STTKK): Keys to be search not exit.\nkeyStart: "
+                            + keyStart.toString() + " keyEnd: " + keyEnd.toString());
+        }
+    }
+
+    /**
+     * 区域化的更改数据，根据输入的字符串分别在 TarList 和 KeyList 中查找符合的 Flag,
+     * 以此确定区域，并将区域内所有的 value都改为输入的 value
+     *
+     * @param value    待更改的数据
+     * @param tarStart 开始位置的 targetName
+     * @param tarEnd   结束位置的 targetName
+     * @param keyStart 开始位置的 keyName
+     * @param keyEnd   结束位置的 keyName
+     * @throws NoExistKeyException    keyStart 或者 keyEnd 不存在
+     * @throws NoExistTargetException tarStart 或者 tarEnd 不存在
+     * @throws FlagDuplicateException 当在列表中有多余1个的 Flag 符合所给名字的时候
+     */
+    public void memsetValueRange(String value,
+                                 String tarStart,
+                                 String tarEnd,
+                                 String keyStart,
+                                 String keyEnd) throws
+            NoExistTargetException, NoExistKeyException, FlagDuplicateException {
+        ArrayList<Target> tarStarts = getTarsFit(tarStart);
+        ArrayList<Target> tarEnds = getTarsFit(tarEnd);
+        ArrayList<Key> keyStarts = getKeysFit(keyStart);
+        ArrayList<Key> keyEnds = getKeysFit(keyEnd);
+        if (tarStarts.size() == 1 && tarEnds.size() == 1 &&
+                keyStarts.size() == 1 && keyEnds.size() == 1) {
+            memsetValueRange(value,
+                    tarStarts.get(0),
+                    tarEnds.get(0),
+                    keyStarts.get(0),
+                    keyEnds.get(0));
+        } else if (tarStarts.size() < 1 || tarEnds.size() < 1) {
+            throw new NoExistTargetException(
+                    "<ERROR> memsetValueRange(SSSSS): Tars to be search not exit.\ntarStart: "
+                            + tarStart + " tarEnd: " + tarEnd);
+        } else if (keyStarts.size() < 1 || keyEnds.size() < 1) {
+            throw new NoExistKeyException(
+                    "<ERROR> memsetValueRange(SSSSS): Keys to be search not exit.\nkeyStart: "
+                            + keyStart + " keyEnd: " + keyEnd);
+        } else {
+            throw new FlagDuplicateException(
+                    "<ERROR> memsetValueRange(SSSSS): More than one Flag has the same name");
+        }
+    }
 
     /**
      * TODO 我不确定是否需要重新写。
