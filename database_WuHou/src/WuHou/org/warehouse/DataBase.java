@@ -304,7 +304,7 @@ public class DataBase {
      * 直接提供 key 名 来添加key 【高级】
      * 即使有名字重复，会输出警告，但更新 id 后依旧添加。
      *
-     * @param keyName 新的key的名字
+     * @param keyName the name of New key
      */
     public void addKeyAdv(String keyName) throws NoExistTargetException, NoExistKeyException {
         Key key = new Key(keyName);
@@ -312,30 +312,72 @@ public class DataBase {
     }
 
     /**
-     * 自动添加 length 长度的 tar，tar的名字采用默认值 tar+[0-99]
-     * <p>
-     * TODO
+     * 自动添加 length 数量的 key，key的名字采用 name+[0-99]
+     *
+     * @param length the number of keys gonna be add to database
+     * @param name the base name of keys
      */
-    public void addDefaultKeys(int length) {
-        
+    public void addNamedKeys(int length, String name){
+        int i = 0;
+        while (i < length) {
+            try {
+                // 强制添加
+                addKeyAdv(name + i);
+            } catch (NoExistTargetException | NoExistKeyException e1) {
+                e1.printStackTrace();
+                //here shouldn't has these exception
+            }
+            i++;
+        }
     }
 
     /**
-     * 自动添加 length 长度的 key，key的名字采用默认值 key+[0-99]
-     * <p>
-     * TODO
+     * 自动添加 length 数量的 key，key的名字采用默认值 Key+[0-99]
+     *
+     * @param length the number of keys gonna be add to database
+     */
+    public void addDefaultKeys(int length) {
+        addNamedKeys(length, "Key");
+    }
+
+    /**
+     * 自动添加 length 数量的 tar，tar的名字采用默认值 name+[0-99]
+     *
+     * @param length the number of targets gonna be add to database
+     * @param name the base name of targets
+     */
+    public void addNamedTars(int length, String name) {
+        int i = 0;
+        while (i < length) {
+            try {
+                // 强制添加
+                addTarAdv(name + i);
+            } catch (NoExistTargetException | NoExistKeyException e1) {
+                e1.printStackTrace();
+                //here shouldn't has these exception
+            }
+            i++;
+        }
+    }
+
+    /**
+     * 自动添加 length 数量的 tar，tar的名字采用默认值 Tar+[0-99]
+     *
+     * @param length the number of targets gonna be add to database
      */
     public void addDefaultTars(int length) {
-
+        addNamedTars(length, "Tar");
     }
 
     /**
      * 自动创建表格，方式是分别调用 addDefaultKeys 和 addDefaultTars
-     * <p>
-     * TODO
+     *
+     * @param tarLength the number of targets gonna be add to database
+     * @param keyLength the number of keys gonna be add to database
      */
     public void createFormTK(int tarLength, int keyLength) {
-
+        addDefaultTars(tarLength);
+        addDefaultKeys(keyLength);
     }
 
     /**
@@ -360,7 +402,7 @@ public class DataBase {
                     + value + " with Tar:" + tar.getName() + " and Key:" + key.getName());
         }
 
-        if (tar == null){
+        if (tar == null) {
             throw new NoExistTargetException("<ERROR> addValue: Input tar is null when adding "
                     + value + " with Key:" + key.getName());
         }
@@ -459,6 +501,11 @@ public class DataBase {
 
     /**
      * 添加 value，为对应 Key，以及所有符合名字的 Tar 添加相同的 value
+     *
+     * @param value the value to be add to database
+     * @param tarName the name of tar to be search in database
+     * @param key the key to be search in database
+     * @throws NoExistTargetException when No Target fit tarName
      */
     public void addValueTarFits(String value, String tarName, Key key) throws
             NoExistTargetException, NoExistKeyException {
@@ -476,22 +523,33 @@ public class DataBase {
 
     /**
      * 添加 value，为对应 Tar，以及所有符合名字的 Key 添加相同的 value
+     *
+     * @param value the value to be add to database
+     * @param tar the tar to be search in database
+     * @param keyName the name of key to be search in database
+     * @throws NoExistKeyException when No Key fit keyName
      */
     public void addValueKeyFits(String value, Target tar, String keyName) throws
             NoExistTargetException, NoExistKeyException {
         ArrayList<Key> keysFit;
         if ((keysFit = getKeysFit(keyName)).size() >= 1) {
-            for (Key keys: keysFit) {
+            for (Key keys : keysFit) {
                 addValue(value, tar, keys);
             }
         } else {
-            throw new NoExistTargetException("<ERROR> addValueKeyFits: No Key fit keyName :"
+            throw new NoExistKeyException("<ERROR> addValueKeyFits: No Key fit keyName :"
                     + keyName);
         }
     }
 
     /**
      * 为所有符合名字的 (tar, key) 都加上相同的 value
+     *
+     * @param value the value to be add to database
+     * @param tarName the name of target to be search in database
+     * @param keyName the name of key to be search in database
+     * @throws NoExistTargetException when No Target fit tarName
+     * @throws NoExistKeyException when No Key fit keyName
      */
     public void addValueAll(String value, String tarName, String keyName) throws
             NoExistTargetException, NoExistKeyException {
@@ -501,7 +559,7 @@ public class DataBase {
             if (keysFit.size() >= 1) {
                 for (Target tars : tarsFit) {
                     for (Key keys : keysFit) {
-                        addValue(value, tars , keys);
+                        addValue(value, tars, keys);
                     }
                 }
             } else {
@@ -513,7 +571,6 @@ public class DataBase {
                     + tarName);
         }
     }
-
 
 
     /**
