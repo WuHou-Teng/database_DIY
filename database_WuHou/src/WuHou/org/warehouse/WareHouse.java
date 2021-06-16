@@ -2,8 +2,7 @@ package WuHou.org.warehouse;
 
 import WuHou.org.attributes.ReWr;
 import WuHou.org.flags.*;
-import WuHou.org.util.DataBaseDuplicateException;
-import WuHou.org.util.NoDataBaseExistException;
+import WuHou.org.util.*;
 
 import javax.xml.crypto.Data;
 import java.text.SimpleDateFormat;
@@ -122,13 +121,15 @@ public class WareHouse {
      *
      * @param name 新建数据库的名字。
      */
-    public void newDataBase(String name) {
+    public DataBase newDataBase(String name) {
         try {
             DataBase dataBase = new DataBase(name, getTime());
             addDataBase(dataBase);
+            return dataBase;
         } catch (DataBaseDuplicateException e) {
             System.err.println("<ERROR> Database creation failed");
             e.printStackTrace();
+            return null;
         }
     }
 
@@ -157,6 +158,7 @@ public class WareHouse {
     /**
      * 提取 DataBase (通过键值)
      *
+     * @param dataBaseName 待查找的数据库名字
      * @return DataBase if it is in
      * @throws NoDataBaseExistException if no DataBase found in wareHouse
      */
@@ -172,6 +174,24 @@ public class WareHouse {
             throw new NoDataBaseExistException(
                     "<ERROR> getDatabase: could not find database with name "
                             + dataBaseName);
+        }
+    }
+
+    /**
+     * 提取 DataBase (通过键值)
+     *
+     * @return DataBase 如果已经有该 DataBase，如果没有，则直接创建一个新的。
+     */
+    public DataBase getDatabaseAdv(String dataBaseName) {
+        if (this.wareHouseEntry.containsKey(dataBaseName)) {
+            try {
+                return permissionCheck(this.wareHouseEntry.get(dataBaseName));
+            } catch (NoDataBaseExistException e) {
+                e.printStackTrace();
+                return null;
+            }
+        } else {
+            return newDataBase(dataBaseName);
         }
     }
 
@@ -303,24 +323,22 @@ public class WareHouse {
         return wareHouseS.toString();
     }
 
-    public static void main(String[] args) throws NoDataBaseExistException {
+    public static void main(String[] args) {
         WareHouse wh = new WareHouse();
         wh.newDataBase("WuHou");
-        wh.newDataBase("Carole");
+        //wh.newDataBase("Carole");
         try {
             wh.getDatabase("WuHou").addTar("MyCarole");
             wh.getDatabase("WuHou").addKey("MyCarole");
             wh.getDatabase("WuHou").addValue("Yeah!!!", "MyCarole", "MyCarole");
-            wh.getDatabase("WuHou").addNamedKeys(5,"CarolK");
-            wh.getDatabase("WuHou").addNamedTars(5,"CarolT");
+            wh.getDatabase("WuHou").addNamedKeys(5, "CarolK");
+            wh.getDatabase("WuHou").addNamedTars(5, "CarolT");
             wh.getDatabase("WuHou").setReference("My Carole!~~");
-            wh.getDatabase("WuHou").memsetValueRange("0", 1, 4, 1,4);
-            wh.getDatabase("WuHou").memsetValueRange("♡", 2, 3, 2,3);
-            wh.getDatabase("WuHou").memsetValueRange("*", "CarolT4","CarolT4","CarolK0","CarolK3");
+            wh.getDatabase("WuHou").memsetValueRange("0", 1, 4, 1, 4);
+            wh.getDatabase("WuHou").memsetValueRange("♡", 2, 3, 2, 3);
+            wh.getDatabase("WuHou").memsetValueRange("*", "CarolT4", "CarolT4", "CarolK0", "CarolK3");
 
-            //wh.getDatabase("Carole").addNamedKeys(5, "LingK");
-            //wh.getDatabase("Carole").addNamedTars(5, "LingT");
-            wh.getDatabase("Carole").formNamedValued(6, 6, "[☭]", "Ling", "Ling");
+            wh.getDatabaseAdv("Carole").formNamedValued(6, 6, "[☭]", "Ling", "Ling");
         } catch (NoDataBaseExistException e) {
             e.printStackTrace();
         } catch (Exception e2) {
@@ -329,4 +347,13 @@ public class WareHouse {
         }
         System.out.println(wh.toString());
     }
+
+    //public static void main(String[] args) throws
+    //        NoExistTargetException, NoExistKeyException, FlagDuplicateException {
+    //    WareHouse wh = new WareHouse();
+    //    wh.getDatabaseAdv("Carole").formNamedValued(6, 6, "[☭]", "Ling", "Ling");
+    //    System.out.println(wh.toString());
+    //}
+
+
 }
