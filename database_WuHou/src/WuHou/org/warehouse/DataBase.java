@@ -885,15 +885,26 @@ public class DataBase {
     }
 
     /**
-     * TODO 我不确定是否需要重新写。
+     * 重写了 equal()
      */
     @Override
     public boolean equals(Object obj) {
-        return super.equals(obj);
+        if (obj == this) {
+            return true;
+        }
+        if (!(obj instanceof DataBase)) {
+            return false;
+        } else {
+            DataBase otherDataBase = (DataBase) obj;
+            return otherDataBase.getName().equals(this.getName()) &&
+                    otherDataBase.getTimeCreated().equals(this.getTimeCreated()) &&
+                    otherDataBase.getReference().equals(this.getReference()) &&
+                    otherDataBase.getAttribute().equals(this.getAttribute());
+        }
     }
 
     /**
-     *
+     * 返回数据库的简要信息。
      */
     @Override
     public String toString() {

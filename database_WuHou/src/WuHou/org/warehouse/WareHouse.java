@@ -593,6 +593,7 @@ public class WareHouse {
 
     /**
      * 数据库搜索引擎
+     * TODO 未来还会添加更多的检索维度。例如 reference，key，tar，甚至 value。
      * 调用所有search，查询所有可能和 key有关的 database
      *
      * @param key 待搜索的关键字
@@ -674,6 +675,7 @@ public class WareHouse {
     /**
      * 检测数据库数据是否正常
      * 有无出现数据量不对等的情况。
+     *
      * TODO
      */
     public boolean verify(String DataBaseName) {
