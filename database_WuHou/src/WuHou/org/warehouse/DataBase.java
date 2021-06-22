@@ -31,7 +31,7 @@ public class DataBase {
     /**
      * 时间反馈
      */
-    public static SimpleDateFormat Fmt = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss:ms");
+    public static SimpleDateFormat Fmt = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 
     /**
      * 内部矩阵 Map格式，用于完全使用 key 来获得相应的 value
@@ -54,6 +54,15 @@ public class DataBase {
     // 权限
     private ReWr permission;
 
+    // 密码
+    private String password;
+
+    // 是否是复制版
+    private int ifCopy;
+
+    // 属性标签
+    private ArrayList<String> attributes;
+
     /**
      * 构造函数
      */
@@ -67,6 +76,9 @@ public class DataBase {
         this.lastEditedTime = timeCreated;
         this.reference = "";
         this.permission = ReWr.READ_WRITE;
+        password = "000000";
+        ifCopy = 0;
+        attributes = new ArrayList<>();
     }
 
     /**
@@ -82,14 +94,62 @@ public class DataBase {
         this.lastEditedTime = dataBase.getLastEditedTime();
         this.reference = dataBase.getReference();
         this.permission = dataBase.getPermission();
+        this.password = dataBase.password;
+        ifCopy = 1;
+        this.attributes = dataBase.attributes;
+    }
+
+    /**
+     * 用于复制的构造函数
+     */
+    public DataBase(DataBase dataBase, ReWr permission) {
+        this.name = dataBase.getName();
+        this.keyList = new ArrayList<>(dataBase.getKeys());
+        this.targetList = new ArrayList<>(dataBase.getTargets());
+        this.valueMatrixList = new ArrayList<>(dataBase.getValuesList());
+        this.valueMatrixMap = new HashMap<>(dataBase.getValuesMap());
+        this.timeCreated = dataBase.getTimeCreated();
+        this.lastEditedTime = dataBase.getLastEditedTime();
+        this.reference = dataBase.getReference();
+        this.permission = permission;
+        this.password = dataBase.password;
+        ifCopy = 1;
+        this.attributes = dataBase.attributes;
+    }
+
+    /**
+     * 用于为数据库修改名字（直接创建一个新的，只有名字不同。）
+     */
+    public DataBase(DataBase dataBase, String Name, String timeCreated) {
+        this.name = Name;
+        this.keyList = new ArrayList<>(dataBase.getKeys());
+        this.targetList = new ArrayList<>(dataBase.getTargets());
+        this.valueMatrixList = new ArrayList<>(dataBase.getValuesList());
+        this.valueMatrixMap = new HashMap<>(dataBase.getValuesMap());
+        this.timeCreated = timeCreated;
+        this.lastEditedTime = dataBase.getLastEditedTime();
+        this.reference = dataBase.getReference();
+        this.permission = dataBase.getPermission();
+        this.password = dataBase.password;
+        ifCopy = 1;
+        this.attributes = dataBase.attributes;
     }
 
     public String getName() {
         return name;
     }
 
-    public void setName(String name) {
+    // 设定数据库的名字。[不推荐]
+    public void setName(String name) throws PermissionDeniedException {
+        if (this.permission.equals(ReWr.READ_ONLY) || this.permission.equals(ReWr.LOCK)) {
+            throw new PermissionDeniedException(
+                    "<ERROR> setName: You have no permission to change database name.");
+        }
         this.name = name;
+        System.err.println(
+                "<WARN> setName: Change name won't change the retrieve in warehouse\n" +
+                "<Recommend> Use changeName(String dBName, String newName) in warehouse" +
+                        " to rebuild database");
     }
 
     // 获得Key列表
@@ -117,6 +177,11 @@ public class DataBase {
         return timeCreated;
     }
 
+    // 重置数据库创建时间
+    //public void setTimeCreated(String timeCreated) {
+    //    this.timeCreated = timeCreated;
+    //}
+
     // 获得数据库最后更新的时间
     public String getLastEditedTime() {
         return lastEditedTime;
@@ -124,7 +189,7 @@ public class DataBase {
 
     // 获取时间字符串
     protected String getTime() {
-        return String.format("|%s|", Fmt.format(new Date()));
+        return String.format("%s", Fmt.format(new Date()));
     }
 
     // 更新数据库最后更新的时间
@@ -155,6 +220,40 @@ public class DataBase {
     // 设定数据库读写权限
     public void setPermission(ReWr permission) {
         this.permission = permission;
+    }
+
+    // 获取密码
+    private String getPassword() {
+        return password;
+    }
+
+    // 查看该database是否是复制体
+    public int getIfCopy() {
+        return ifCopy;
+    }
+
+    // 修改database的复制标识。
+    public void setIfCopy(int ifCopy) {
+        this.ifCopy = ifCopy;
+    }
+
+    // 获取属性标签
+    public ArrayList<String> getAttribute() {
+        return attributes;
+    }
+
+    // 添加新的属性标签
+    public void addAttribute(String attribute) {
+        this.attributes.add(attribute);
+    }
+
+    // 设定密码
+    public boolean setPassword(String password, String newPassword) {
+        if (getPassword().equals(password)) {
+            this.password = newPassword;
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -791,6 +890,15 @@ public class DataBase {
     @Override
     public boolean equals(Object obj) {
         return super.equals(obj);
+    }
+
+    /**
+     *
+     */
+    @Override
+    public String toString() {
+        return String.format("Name: %s, Created on: %s, reference: %s\n Attributes: %s\n",
+                getName(), getTimeCreated(), getReference(), getAttribute().toString());
     }
 }
 

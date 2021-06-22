@@ -1,43 +1,76 @@
 package WuHou.org.flags;
 
 import java.security.KeyPair;
+import java.util.ArrayList;
+
 import WuHou.org.attributes.ReWr;
+import WuHou.org.util.PermissionDeniedException;
 
 public class Flag {
     /** flag 的名字 */
-    private String flag;
+    private String name;
     /** flag 的编号 */
     private int id;
     /** 读写权限 */
     private ReWr permission;
+    /** 属性 */
+    private ArrayList<String> attribute;
+    /** 创建者 */
+    private String author;
+    /** 权限密码 */
+    private String password = "000000";
 
     public Flag(String flag) {
-        this.flag = flag;
-        this.id = 0;
+        this.name = flag;
+        id = 0;
+        permission = ReWr.READ_WRITE;
+    }
+
+    public Flag(String flag, String author) {
+        this.name = flag;
+        this.author = author;
+        id = 0;
         permission = ReWr.READ_WRITE;
     }
 
     public Flag(String flag, int id) {
-        this.flag = flag;
+        this.name = flag;
         this.id = id;
         permission = ReWr.READ_WRITE;
     }
 
+    public Flag(String flag, ReWr permission) {
+        this.name = flag;
+        id = 0;
+        this.permission = permission;
+    }
+
     public Flag(String flag, int id, ReWr permission){
-        this.flag = flag;
+        this.name = flag;
         this.id = id;
         this.permission = permission;
     }
 
+    public Flag(String flag, int id, ReWr permission, String author) {
+        this.name = flag;
+        this.id = id;
+        this.permission = permission;
+        this.author = author;
+    }
+
     public String getName() {
-        return flag;
+        return name;
     }
 
-    public void setName(String newFlag) {
-        this.flag = newFlag;
+    public void setName(String newFlag) throws PermissionDeniedException {
+        if (getPermission() == ReWr.READ_ONLY || getPermission() == ReWr.LOCK) {
+            throw new PermissionDeniedException("<ERROR> setName: You have no permission to do this");
+        } else {
+            this.name = newFlag;
+        }
     }
 
-    public int getId() {
+    public int getId(){
         return id;
     }
 
@@ -50,8 +83,38 @@ public class Flag {
         return permission;
     }
 
-    protected void setPermission(ReWr permission) {
+    private void setPermission(ReWr permission) {
         this.permission = permission;
+    }
+
+    public String getAuthor() {
+        return author;
+    }
+
+    public ArrayList<String> getAttribute() {
+        return attribute;
+    }
+
+    /**
+     * 对外开放的权限求改方法，需要密码
+     */
+    public boolean changePermission (String password, ReWr permission) {
+        if (this.password.equals(password)) {
+            setPermission(permission);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 对外开放的修改密码方法，需要原密码
+     */
+    public boolean changePassword (String password, String newPassword) {
+        if (this.password.equals(password)) {
+            this.password = newPassword;
+            return true;
+        }
+        return false;
     }
 
     @Override
